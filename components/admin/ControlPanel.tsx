@@ -31,6 +31,8 @@ export function ControlPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState<PendingAction | null>(null);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
 
   async function refresh() {
     try {
@@ -55,6 +57,20 @@ export function ControlPanel() {
       setStatus(data.status);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "전환에 실패했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resetRecords() {
+    setBusy(true);
+    setError("");
+    setResetDone(false);
+    try {
+      await apiSend("/api/records/reset", "POST");
+      setResetDone(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "초기화에 실패했습니다.");
     } finally {
       setBusy(false);
     }
@@ -123,6 +139,38 @@ export function ControlPanel() {
         </ActionButton>
       </div>
 
+      <div className="mt-2 border-t border-slate-200 pt-5">
+        <p className="mb-3 text-sm text-slate-400">
+          새 행사를 시작하기 전에 모든 크루원의 점수를 0으로 되돌립니다.
+        </p>
+        {resetDone && (
+          <p className="mb-3 text-sm font-medium text-emerald-600">
+            모든 기록이 초기화되었습니다.
+          </p>
+        )}
+        <ActionButton
+          onClick={() => setIsResetModalOpen(true)}
+          disabled={busy}
+          variant="danger"
+        >
+          기록 초기화
+        </ActionButton>
+      </div>
+
+      <Modal
+        isOpen={isResetModalOpen}
+        icon="🧹"
+        title="모든 기록을 초기화할까요?"
+        message="전체 크루원의 점수가 0으로 초기화됩니다. 되돌릴 수 없습니다."
+        confirmLabel="초기화"
+        isDanger
+        onConfirm={() => {
+          setIsResetModalOpen(false);
+          void resetRecords();
+        }}
+        onCancel={() => setIsResetModalOpen(false)}
+      />
+
       <Modal
         isOpen={pending !== null}
         icon={pending?.icon}
@@ -149,12 +197,13 @@ function ActionButton({
   children: React.ReactNode;
   onClick: () => void;
   disabled?: boolean;
-  variant: "primary" | "warn" | "ghost";
+  variant: "primary" | "warn" | "ghost" | "danger";
 }) {
   const styles: Record<typeof variant, string> = {
     primary: "bg-indigo-600 text-white",
     warn: "bg-amber-500 text-white",
     ghost: "border border-slate-300 text-slate-700",
+    danger: "w-full border border-red-300 text-red-600",
   };
   return (
     <button

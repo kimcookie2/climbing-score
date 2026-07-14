@@ -92,6 +92,13 @@ export function deleteUser(id: number): void {
   getDb().prepare(`DELETE FROM users WHERE id = ?`).run(id);
 }
 
+/** 모든 크루원의 풀이 기록을 0으로 초기화. */
+export function resetAllRecords(): void {
+  getDb()
+    .prepare(`UPDATE records SET count = 0, updated_at = CURRENT_TIMESTAMP`)
+    .run();
+}
+
 export function updateDifficultyPoints(
   points: { id: number; points: number }[],
 ): void {
