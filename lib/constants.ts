@@ -12,9 +12,6 @@ export const POLL_INTERVAL_MS = 6000;
 /** iron-session 쿠키 이름. */
 export const SESSION_COOKIE_NAME = "climbing_session";
 
-/** 결과 페이지 컨페티 재생 여부를 기록하는 localStorage 키 접두어. */
-export const CONFETTI_SEEN_KEY = "climbing_confetti_seen";
-
 export type DifficultySeed = {
   colorName: string;
   colorHex: string;

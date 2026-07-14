@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  CONFETTI_SEEN_KEY,
-  POLL_INTERVAL_MS,
-  type EventStatus,
-} from "@/lib/constants";
+import { POLL_INTERVAL_MS, type EventStatus } from "@/lib/constants";
 import { apiGet } from "@/lib/client";
 import { usePolling } from "@/hooks/usePolling";
 import type { Difficulty, RankingRow, SessionUser } from "@/lib/types";
@@ -41,25 +37,18 @@ export function ResultScreen({ user }: { user: SessionUser }) {
       .catch(() => {});
   }, []);
 
-  // 첫 진입 시에만 컨페티 재생 (localStorage로 반복 방지).
+  // 결과 페이지에 들어올 때마다 컨페티 재생.
   useEffect(() => {
     if (!data) return;
-    const seen = localStorage.getItem(CONFETTI_SEEN_KEY);
-    if (!seen) {
-      localStorage.setItem(CONFETTI_SEEN_KEY, "1");
-      setShowCongrats(true);
-      void fireConfetti();
-    }
+    setShowCongrats(true);
+    void fireConfetti();
   }, [data]);
 
-  // 발표가 취소되면(→ OPEN/CLOSED) seen 플래그를 지우고 기본 화면으로.
+  // 발표가 취소되면(→ OPEN/CLOSED) 기본 화면으로.
   usePolling(async () => {
     try {
       const { status } = await apiGet<{ status: EventStatus }>("/api/state");
-      if (status !== "ANNOUNCED") {
-        localStorage.removeItem(CONFETTI_SEEN_KEY);
-        router.replace("/");
-      }
+      if (status !== "ANNOUNCED") router.replace("/");
     } catch {
       /* 무시 */
     }
