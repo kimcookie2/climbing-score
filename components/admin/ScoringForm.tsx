@@ -8,17 +8,21 @@ import { ColorSwatch } from "@/components/ColorSwatch";
 export function ScoringForm() {
   const [difficulties, setDifficulties] = useState<Difficulty[]>([]);
   const [points, setPoints] = useState<Record<number, string>>({});
+  const [threshold, setThreshold] = useState("0");
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    apiGet<{ difficulties: Difficulty[] }>("/api/scoring")
-      .then(({ difficulties }) => {
+    apiGet<{ difficulties: Difficulty[]; raffleThreshold: number }>(
+      "/api/scoring",
+    )
+      .then(({ difficulties, raffleThreshold }) => {
         setDifficulties(difficulties);
         setPoints(
           Object.fromEntries(difficulties.map((d) => [d.id, String(d.points)])),
         );
+        setThreshold(String(raffleThreshold));
       })
       .catch(() => setError("불러오기에 실패했습니다."));
   }, []);
@@ -43,8 +47,15 @@ export function ScoringForm() {
       return;
     }
 
+    const raffleThreshold = Number(threshold);
+    if (!Number.isInteger(raffleThreshold) || raffleThreshold < 0) {
+      setError("추첨권 기준점수는 0 이상 정수여야 합니다.");
+      setBusy(false);
+      return;
+    }
+
     try {
-      await apiSend("/api/scoring", "PUT", { points: payload });
+      await apiSend("/api/scoring", "PUT", { points: payload, raffleThreshold });
       setSaved(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "저장에 실패했습니다.");
@@ -80,6 +91,30 @@ export function ScoringForm() {
           </li>
         ))}
       </ul>
+
+      <div className="border-t border-slate-200 pt-4">
+        <div className="flex items-center gap-3">
+          <span className="text-xl">🎫</span>
+          <span className="font-semibold text-slate-800">추첨권 기준점수</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={threshold}
+            onChange={(e) => {
+              setSaved(false);
+              setThreshold(e.target.value);
+            }}
+            className="ml-auto h-11 w-24 rounded-lg border border-slate-300 px-3 text-right text-lg tabular-nums outline-none focus:border-slate-900"
+          />
+          <span className="text-slate-400">점</span>
+        </div>
+        <p className="mt-2 text-sm text-slate-400">
+          기준점수를 넘을 때마다 추첨권 1장 (예: 기준 10점, 총점 25점 → 2장). 0이면
+          미사용.
+        </p>
+      </div>
 
       {error && <p className="text-sm font-medium text-red-600">{error}</p>}
       {saved && <p className="text-sm font-medium text-emerald-600">저장되었습니다.</p>}

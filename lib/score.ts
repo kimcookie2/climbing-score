@@ -18,3 +18,12 @@ export function calcTotalScore(
 export function calcTotalProblems(counts: Record<number, number>): number {
   return Object.values(counts).reduce((sum, c) => sum + c, 0);
 }
+
+/**
+ * 추첨권 개수 — 기준점수를 넘을 때마다 1장 (예: 기준 10점, 총점 25점 → 2장).
+ * 기준점수 0 이하는 미사용으로 0장.
+ */
+export function calcRaffleTickets(total: number, threshold: number): number {
+  if (threshold <= 0) return 0;
+  return Math.floor(total / threshold);
+}

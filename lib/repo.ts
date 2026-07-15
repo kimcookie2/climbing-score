@@ -16,6 +16,20 @@ export function setEventStatus(status: EventStatus): void {
   getDb().prepare(`UPDATE event_state SET status = ? WHERE id = 1`).run(status);
 }
 
+/** 추첨권 기준점수 조회 (0 = 미사용). */
+export function getRaffleThreshold(): number {
+  const row = getDb()
+    .prepare(`SELECT raffle_threshold FROM event_state WHERE id = 1`)
+    .get() as { raffle_threshold: number };
+  return row.raffle_threshold;
+}
+
+export function setRaffleThreshold(threshold: number): void {
+  getDb()
+    .prepare(`UPDATE event_state SET raffle_threshold = ? WHERE id = 1`)
+    .run(threshold);
+}
+
 export function getDifficulties(): Difficulty[] {
   return getDb()
     .prepare(`SELECT * FROM difficulties ORDER BY sort_order ASC`)

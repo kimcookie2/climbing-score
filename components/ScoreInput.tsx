@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ApiError, apiGet, apiSend } from "@/lib/client";
-import { calcTotalScore } from "@/lib/score";
+import { calcRaffleTickets, calcTotalScore } from "@/lib/score";
 import type { Difficulty, MyRecords } from "@/lib/types";
 import { ColorSwatch } from "./ColorSwatch";
 import { Modal } from "./Modal";
@@ -22,6 +22,7 @@ export function ScoreInput({ onEventClosed }: Props) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [isLoading, setIsLoading] = useState(true);
   const [isClosedModalOpen, setIsClosedModalOpen] = useState(false);
+  const [raffleThreshold, setRaffleThreshold] = useState(0);
 
   const timers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -30,6 +31,7 @@ export function ScoreInput({ onEventClosed }: Props) {
       .then((data) => {
         setDifficulties(data.difficulties);
         setCounts(data.counts);
+        setRaffleThreshold(data.raffleThreshold);
       })
       .catch(() => setSaveState("error"))
       .finally(() => setIsLoading(false));
@@ -72,6 +74,7 @@ export function ScoreInput({ onEventClosed }: Props) {
   // 높은 난이도부터(흰색 → 빨강).
   const highToLow = [...difficulties].sort((a, b) => b.sort_order - a.sort_order);
   const total = calcTotalScore(counts, difficulties);
+  const tickets = calcRaffleTickets(total, raffleThreshold);
 
   if (isLoading) {
     return <p className="p-6 text-center text-slate-400">불러오는 중…</p>;
@@ -109,7 +112,12 @@ export function ScoreInput({ onEventClosed }: Props) {
         ))}
       </ul>
 
-      <TotalBar total={total} saveState={saveState} />
+      <TotalBar
+        total={total}
+        tickets={tickets}
+        showTickets={raffleThreshold > 0}
+        saveState={saveState}
+      />
 
       <Modal
         isOpen={isClosedModalOpen}
@@ -173,7 +181,17 @@ function CountInput({
   );
 }
 
-function TotalBar({ total, saveState }: { total: number; saveState: SaveState }) {
+function TotalBar({
+  total,
+  tickets,
+  showTickets,
+  saveState,
+}: {
+  total: number;
+  tickets: number;
+  showTickets: boolean;
+  saveState: SaveState;
+}) {
   const saveLabel: Record<SaveState, string> = {
     idle: "",
     saving: "저장 중…",
@@ -190,8 +208,15 @@ function TotalBar({ total, saveState }: { total: number; saveState: SaveState })
         >
           {saveLabel[saveState]}
         </span>
-        <span className="text-lg font-bold text-slate-900">
-          총점 <span className="tabular-nums">{total}</span>점
+        <span className="flex items-center gap-3">
+          {showTickets && (
+            <span className="flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-700">
+              🎫 추첨권 <span className="tabular-nums">{tickets}</span>개
+            </span>
+          )}
+          <span className="text-lg font-bold text-slate-900">
+            총점 <span className="tabular-nums">{total}</span>점
+          </span>
         </span>
       </div>
     </div>

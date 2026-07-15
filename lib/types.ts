@@ -24,11 +24,12 @@ export type RecordRow = {
   updated_at: string | null;
 };
 
-/** 내 기록 응답: 난이도별 개수 + 총점. */
+/** 내 기록 응답: 난이도별 개수 + 총점 + 추첨권 기준점수. */
 export type MyRecords = {
   difficulties: Difficulty[];
   counts: Record<number, number>; // difficulty_id -> count
   total: number;
+  raffleThreshold: number; // 0 = 미사용
 };
 
 /** 순위표 한 행. */

@@ -54,6 +54,16 @@ function migrate(db: Database.Database): void {
       status  TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN','CLOSED','ANNOUNCED'))
     );
   `);
+
+  // 추첨권 기준점수 컬럼 (기존 DB에는 ALTER로 추가, 0 = 미사용).
+  const eventStateColumns = db
+    .prepare(`PRAGMA table_info(event_state)`)
+    .all() as { name: string }[];
+  if (!eventStateColumns.some((c) => c.name === "raffle_threshold")) {
+    db.exec(
+      `ALTER TABLE event_state ADD COLUMN raffle_threshold INTEGER NOT NULL DEFAULT 0`,
+    );
+  }
 }
 
 function seed(db: Database.Database): void {

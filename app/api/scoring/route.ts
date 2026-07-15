@@ -1,8 +1,13 @@
-// GET/PUT /api/scoring — 난이도별 배점 조회/일괄 저장. admin 전용.
+// GET/PUT /api/scoring — 난이도별 배점 + 추첨권 기준점수 조회/일괄 저장. admin 전용.
 
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { getDifficulties, updateDifficultyPoints } from "@/lib/repo";
+import {
+  getDifficulties,
+  getRaffleThreshold,
+  setRaffleThreshold,
+  updateDifficultyPoints,
+} from "@/lib/repo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +16,10 @@ export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
-  return NextResponse.json({ difficulties: getDifficulties() });
+  return NextResponse.json({
+    difficulties: getDifficulties(),
+    raffleThreshold: getRaffleThreshold(),
+  });
 }
 
 export async function PUT(request: Request) {
@@ -25,7 +33,10 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
   }
 
-  const points = (body as { points?: unknown }).points;
+  const { points, raffleThreshold } = body as {
+    points?: unknown;
+    raffleThreshold?: unknown;
+  };
   if (!Array.isArray(points)) {
     return NextResponse.json(
       { error: "points 배열이 필요합니다." },
@@ -49,6 +60,18 @@ export async function PUT(request: Request) {
     }
   }
 
+  if (!Number.isInteger(raffleThreshold) || (raffleThreshold as number) < 0) {
+    return NextResponse.json(
+      { error: "추첨권 기준점수는 0 이상 정수여야 합니다." },
+      { status: 400 },
+    );
+  }
+
   updateDifficultyPoints(points as { id: number; points: number }[]);
-  return NextResponse.json({ difficulties: getDifficulties() });
+  setRaffleThreshold(raffleThreshold as number);
+
+  return NextResponse.json({
+    difficulties: getDifficulties(),
+    raffleThreshold: getRaffleThreshold(),
+  });
 }

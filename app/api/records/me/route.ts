@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/auth";
 import {
   getDifficulties,
   getEventStatus,
+  getRaffleThreshold,
   getUserCounts,
   upsertRecord,
 } from "@/lib/repo";
@@ -24,6 +25,7 @@ export async function GET() {
     difficulties,
     counts,
     total: calcTotalScore(counts, difficulties),
+    raffleThreshold: getRaffleThreshold(),
   };
   return NextResponse.json(body);
 }
@@ -80,6 +82,7 @@ export async function PUT(request: Request) {
     difficulties,
     counts,
     total: calcTotalScore(counts, difficulties),
+    raffleThreshold: getRaffleThreshold(),
   };
   return NextResponse.json(responseBody);
 }
