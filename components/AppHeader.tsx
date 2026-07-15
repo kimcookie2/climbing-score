@@ -9,6 +9,8 @@ import type { SessionUser } from "@/lib/types";
 type Props = {
   user: SessionUser;
   title: string;
+  /** 추첨권 개수 — null이면 미표시(기준점수 미사용 또는 해당 없는 화면). */
+  tickets?: number | null;
 };
 
 export const ADMIN_LINKS = [
@@ -19,7 +21,7 @@ export const ADMIN_LINKS = [
   { href: "/admin/members", label: "크루원 관리" },
 ];
 
-export function AppHeader({ user, title }: Props) {
+export function AppHeader({ user, title, tickets = null }: Props) {
   const router = useRouter();
   const [isNavOpen, setIsNavOpen] = useState(false);
   const isAdmin = user.role === "admin";
@@ -47,6 +49,11 @@ export function AppHeader({ user, title }: Props) {
         <span className="ml-auto text-sm font-medium text-slate-500">
           {user.nickname}
         </span>
+        {tickets !== null && (
+          <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">
+            🎫 추첨권 <span className="tabular-nums">{tickets}</span>개
+          </span>
+        )}
         <button
           type="button"
           onClick={handleLogout}

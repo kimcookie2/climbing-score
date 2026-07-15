@@ -20,6 +20,7 @@ type Props = {
 export function HomeScreen({ user, initialStatus }: Props) {
   const router = useRouter();
   const [status, setStatus] = useState<EventStatus>(initialStatus);
+  const [tickets, setTickets] = useState<number | null>(null);
 
   const isAdmin = user.role === "admin";
 
@@ -64,8 +65,9 @@ export function HomeScreen({ user, initialStatus }: Props) {
 
   return (
     <main className="mx-auto min-h-dvh max-w-md bg-white">
-      <AppHeader user={user} title="점수 입력" />
+      <AppHeader user={user} title="점수 입력" tickets={tickets} />
       <ScoreInput
+        onTicketsChange={setTickets}
         onEventClosed={async () => {
           // 폴링을 기다리지 않고 즉시 서버 상태를 반영해 집계중 화면으로 전환.
           try {

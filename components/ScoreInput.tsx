@@ -14,9 +14,11 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 type Props = {
   /** 마감(409) 감지 시 호출 — 상위에서 집계중 화면으로 전환한다. */
   onEventClosed?: () => void;
+  /** 추첨권 개수 변경 시 호출 — 헤더 배지 표시용 (null = 기준점수 미사용). */
+  onTicketsChange?: (tickets: number | null) => void;
 };
 
-export function ScoreInput({ onEventClosed }: Props) {
+export function ScoreInput({ onEventClosed, onTicketsChange }: Props) {
   const [difficulties, setDifficulties] = useState<Difficulty[]>([]);
   const [counts, setCounts] = useState<Record<number, number>>({});
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -76,6 +78,11 @@ export function ScoreInput({ onEventClosed }: Props) {
   const total = calcTotalScore(counts, difficulties);
   const tickets = calcRaffleTickets(total, raffleThreshold);
 
+  // 추첨권 수를 상위(헤더)로 보고.
+  useEffect(() => {
+    onTicketsChange?.(raffleThreshold > 0 ? tickets : null);
+  }, [tickets, raffleThreshold, onTicketsChange]);
+
   if (isLoading) {
     return <p className="p-6 text-center text-slate-400">불러오는 중…</p>;
   }
@@ -112,12 +119,7 @@ export function ScoreInput({ onEventClosed }: Props) {
         ))}
       </ul>
 
-      <TotalBar
-        total={total}
-        tickets={tickets}
-        showTickets={raffleThreshold > 0}
-        saveState={saveState}
-      />
+      <TotalBar total={total} saveState={saveState} />
 
       <Modal
         isOpen={isClosedModalOpen}
@@ -181,17 +183,7 @@ function CountInput({
   );
 }
 
-function TotalBar({
-  total,
-  tickets,
-  showTickets,
-  saveState,
-}: {
-  total: number;
-  tickets: number;
-  showTickets: boolean;
-  saveState: SaveState;
-}) {
+function TotalBar({ total, saveState }: { total: number; saveState: SaveState }) {
   const saveLabel: Record<SaveState, string> = {
     idle: "",
     saving: "저장 중…",
@@ -208,15 +200,8 @@ function TotalBar({
         >
           {saveLabel[saveState]}
         </span>
-        <span className="flex items-center gap-3">
-          {showTickets && (
-            <span className="flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-700">
-              🎫 추첨권 <span className="tabular-nums">{tickets}</span>개
-            </span>
-          )}
-          <span className="text-lg font-bold text-slate-900">
-            총점 <span className="tabular-nums">{total}</span>점
-          </span>
+        <span className="text-lg font-bold text-slate-900">
+          총점 <span className="tabular-nums">{total}</span>점
         </span>
       </div>
     </div>
