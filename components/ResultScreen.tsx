@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { POLL_INTERVAL_MS, type EventStatus } from "@/lib/constants";
 import { apiGet } from "@/lib/client";
 import { usePolling } from "@/hooks/usePolling";
-import type { Difficulty, RankingRow, SessionUser } from "@/lib/types";
+import { calcRaffleTickets } from "@/lib/score";
+import type { Difficulty, MyRecords, RankingRow, SessionUser } from "@/lib/types";
 import { AppHeader } from "./AppHeader";
 import { Podium } from "./Podium";
 import { RankingTable } from "./RankingTable";
@@ -30,10 +31,22 @@ export function ResultScreen({ user }: { user: SessionUser }) {
   const userId = user.userId;
   const [data, setData] = useState<RankingResponse | null>(null);
   const [showCongrats, setShowCongrats] = useState(false);
+  const [tickets, setTickets] = useState<number | null>(null);
 
   useEffect(() => {
     apiGet<RankingResponse>("/api/ranking")
       .then(setData)
+      .catch(() => {});
+
+    // 헤더 추첨권 배지.
+    apiGet<MyRecords>("/api/records/me")
+      .then((d) =>
+        setTickets(
+          d.raffleThreshold > 0
+            ? calcRaffleTickets(d.total, d.raffleThreshold)
+            : null,
+        ),
+      )
       .catch(() => {});
   }, []);
 
@@ -56,7 +69,7 @@ export function ResultScreen({ user }: { user: SessionUser }) {
 
   return (
     <main className="mx-auto min-h-dvh max-w-2xl bg-white pb-10">
-      <AppHeader user={user} title="결과 발표" />
+      <AppHeader user={user} title="결과 발표" tickets={tickets} />
       <div className="bg-gradient-to-b from-indigo-50 to-white px-4 pb-6 pt-8">
         {showCongrats && (
           <p className="mb-6 text-center text-2xl font-black text-indigo-600">

@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { POLL_INTERVAL_MS, type EventStatus } from "@/lib/constants";
 import { apiGet } from "@/lib/client";
 import { usePolling } from "@/hooks/usePolling";
-import type { SessionUser } from "@/lib/types";
+import { calcRaffleTickets } from "@/lib/score";
+import type { MyRecords, SessionUser } from "@/lib/types";
 import { ScoreInput } from "./ScoreInput";
 import { WaitingScreen } from "./WaitingScreen";
 import { AppHeader } from "./AppHeader";
@@ -38,11 +39,26 @@ export function HomeScreen({ user, initialStatus }: Props) {
     if (status === "ANNOUNCED" && !isAdmin) router.replace("/result");
   }, [status, isAdmin, router]);
 
+  // 헤더 추첨권 배지는 화면 상태와 무관하게 항상 표시 (입력 중엔 ScoreInput이 실시간 갱신).
+  useEffect(() => {
+    apiGet<MyRecords>("/api/records/me")
+      .then((d) =>
+        setTickets(
+          d.raffleThreshold > 0
+            ? calcRaffleTickets(d.total, d.raffleThreshold)
+            : null,
+        ),
+      )
+      .catch(() => {
+        /* 배지 표시는 부가 정보 — 실패는 무시 */
+      });
+  }, [status]);
+
   if (status !== "OPEN") {
     // 마감/발표 상태에서도 헤더(닉네임·나가기, 운영진은 네비게이션 포함)를 유지한다.
     return (
       <main className="mx-auto min-h-dvh max-w-md bg-white">
-        <AppHeader user={user} title="점수 입력" />
+        <AppHeader user={user} title="점수 입력" tickets={tickets} />
         {status === "ANNOUNCED" && isAdmin ? (
           <div className="flex flex-col items-center gap-4 px-8 py-24 text-center">
             <div className="text-5xl">🎉</div>
