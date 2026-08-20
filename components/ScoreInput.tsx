@@ -25,8 +25,10 @@ export function ScoreInput({ onEventClosed, onTicketsChange }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [isClosedModalOpen, setIsClosedModalOpen] = useState(false);
   const [raffleThreshold, setRaffleThreshold] = useState(0);
+  const [bumpedId, setBumpedId] = useState<number | null>(null);
 
   const timers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+  const bumpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     apiGet<MyRecords>("/api/records/me")
@@ -41,8 +43,15 @@ export function ScoreInput({ onEventClosed, onTicketsChange }: Props) {
     const pending = timers.current;
     return () => {
       pending.forEach((t) => clearTimeout(t));
+      if (bumpTimer.current) clearTimeout(bumpTimer.current);
     };
   }, []);
+
+  function bumpHeart(difficultyId: number) {
+    if (bumpTimer.current) clearTimeout(bumpTimer.current);
+    setBumpedId(difficultyId);
+    bumpTimer.current = setTimeout(() => setBumpedId(null), 220);
+  }
 
   function scheduleSave(difficultyId: number, count: number) {
     const existing = timers.current.get(difficultyId);
@@ -92,7 +101,9 @@ export function ScoreInput({ onEventClosed, onTicketsChange }: Props) {
       <ul className="divide-y divide-slate-200">
         {highToLow.map((d) => (
           <li key={d.id} className="flex items-center gap-3 px-4 py-3">
-            <ColorSwatch colorHex={d.color_hex} />
+            <span className={bumpedId === d.id ? "heart-pop" : ""}>
+              <ColorSwatch colorHex={d.color_hex} size={34} />
+            </span>
             <span className="w-14 text-base font-semibold tabular-nums text-slate-800">
               {d.points}점
             </span>
@@ -110,7 +121,10 @@ export function ScoreInput({ onEventClosed, onTicketsChange }: Props) {
               />
               <StepperButton
                 label="더하기"
-                onClick={() => setCount(d.id, (counts[d.id] ?? 0) + 1)}
+                onClick={() => {
+                  setCount(d.id, (counts[d.id] ?? 0) + 1);
+                  bumpHeart(d.id);
+                }}
               >
                 +
               </StepperButton>
