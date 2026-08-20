@@ -10,11 +10,64 @@ const ITEM_H = 76;
 const VISIBLE = 5;
 const CENTER = Math.floor(VISIBLE / 2);
 const LEAD_IN = 58; // 당첨자 앞에 지나갈 이름 개수
-const SPIN_MS = 5200;
-const OVERSHOOT = 30; // 살짝 지나쳤다가 되돌아오는 거리(px)
 
 const easeOutQuint = (x: number) => 1 - Math.pow(1 - x, 5);
 const easeOutCubic = (x: number) => 1 - Math.pow(1 - x, 3);
+const easeOutQuad = (x: number) => 1 - (1 - x) * (1 - x);
+const easeInOutCubic = (x: number) =>
+  x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const easeOutBack = (x: number) => {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+};
+
+/** 마무리 연출 패턴 — 매 추첨마다 랜덤 선택. curve(t, target)는 t∈[0,1]에서의 y 위치. */
+type SpinEnding = {
+  duration: number;
+  curve: (t: number, target: number) => number;
+};
+
+const ENDINGS: SpinEnding[] = [
+  {
+    // ① 기본 — 살짝(30px) 지나쳤다가 스르륵 복귀
+    duration: 5200,
+    curve: (t, target) =>
+      t < 0.88
+        ? (target + 30) * easeOutQuint(t / 0.88)
+        : target + 30 * (1 - easeOutCubic((t - 0.88) / 0.12)),
+  },
+  {
+    // ② 두 칸 가까이 확 넘어갔다가 천천히 되감기 — "아깝게 지나쳤나?!"
+    duration: 6000,
+    curve: (t, target) => {
+      const over = ITEM_H * 1.7;
+      return t < 0.76
+        ? (target + over) * easeOutQuint(t / 0.76)
+        : target + over * (1 - easeInOutCubic((t - 0.76) / 0.24));
+    },
+  },
+  {
+    // ③ 한 칸 지나쳐 멈칫… 반대방향으로 한 칸 쏙 (미세 바운스)
+    duration: 5600,
+    curve: (t, target) => {
+      const over = ITEM_H;
+      if (t < 0.78) return (target + over) * easeOutQuint(t / 0.78);
+      if (t < 0.9) return target + over; // 긴장의 정적
+      return target + over * (1 - easeOutBack((t - 0.9) / 0.1));
+    },
+  },
+  {
+    // ④ 마지막 한 칸을 아주 천천히 기어가서 도착 — 초조한 슬로우
+    duration: 6400,
+    curve: (t, target) => {
+      const crawlFrom = target - ITEM_H * 0.95;
+      return t < 0.6
+        ? crawlFrom * easeOutCubic(t / 0.6)
+        : crawlFrom + ITEM_H * 0.95 * easeOutQuad((t - 0.6) / 0.4);
+    },
+  },
+];
 
 /** 추첨권 수에 비례한 풀에서 인접 중복 없이 뽑는 픽 함수 생성. */
 function makePicker(people: readonly RaffleParticipant[]) {
@@ -149,17 +202,14 @@ export function RaffleScreen() {
       return;
     }
 
+    // 마무리 연출을 랜덤 선택 — 매번 다른 긴장감
+    const ending = ENDINGS[Math.floor(Math.random() * ENDINGS.length)];
     const t0 = performance.now();
     let prev = 0;
 
     const step = (now: number) => {
-      const t = Math.min(1, (now - t0) / SPIN_MS);
-      let y: number;
-      if (t < 0.88) {
-        y = (target + OVERSHOOT) * easeOutQuint(t / 0.88);
-      } else {
-        y = target + OVERSHOOT * (1 - easeOutCubic((t - 0.88) / 0.12));
-      }
+      const t = Math.min(1, (now - t0) / ending.duration);
+      const y = ending.curve(t, target);
       // 속도에 비례한 은은한 블러 — 빠를 때도 이름이 살짝 읽히게 약하게만
       setBlur(Math.min(2, Math.abs(y - prev) * 0.04));
       prev = y;
