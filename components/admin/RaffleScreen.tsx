@@ -16,27 +16,44 @@ const OVERSHOOT = 30; // 살짝 지나쳤다가 되돌아오는 거리(px)
 const easeOutQuint = (x: number) => 1 - Math.pow(1 - x, 5);
 const easeOutCubic = (x: number) => 1 - Math.pow(1 - x, 3);
 
-/** 릴 스트립 — 이름이 추첨권 수에 비례해 등장해서 확률이 눈에 보인다. */
+/** 추첨권 수에 비례한 풀에서 인접 중복 없이 뽑는 픽 함수 생성. */
+function makePicker(people: readonly RaffleParticipant[]) {
+  const pool = people.flatMap((p) => Array<RaffleParticipant>(p.tickets).fill(p));
+  let last: number | null = null;
+  return {
+    pick(): RaffleParticipant {
+      let c: RaffleParticipant;
+      do {
+        c = pool[Math.floor(Math.random() * pool.length)];
+      } while (pool.length > 1 && c.userId === last);
+      last = c.userId;
+      return c;
+    },
+    setLast(id: number) {
+      last = id;
+    },
+  };
+}
+
+/** 릴 스트립 — 이름이 추첨권 수에 비례해 섞여 등장해서 확률이 눈에 보인다. */
 function buildStrip(
   people: readonly RaffleParticipant[],
   winner: RaffleParticipant,
 ): RaffleParticipant[] {
-  const pool = people.flatMap((p) => Array<RaffleParticipant>(p.tickets).fill(p));
+  const picker = makePicker(people);
   const strip: RaffleParticipant[] = [];
-  let last: number | null = null;
-  const pick = () => {
-    let c: RaffleParticipant;
-    do {
-      c = pool[Math.floor(Math.random() * pool.length)];
-    } while (pool.length > 1 && c.userId === last);
-    last = c.userId;
-    return c;
-  };
-  for (let i = 0; i < LEAD_IN; i++) strip.push(pick());
+  for (let i = 0; i < LEAD_IN; i++) strip.push(picker.pick());
   strip.push(winner);
-  last = winner.userId;
-  for (let i = 0; i < VISIBLE; i++) strip.push(pick());
+  picker.setLast(winner.userId);
+  for (let i = 0; i < VISIBLE; i++) strip.push(picker.pick());
   return strip;
+}
+
+/** 대기 화면용 스트립 — 시작 전에도 이름들이 섞여 보이도록. */
+function buildIdleStrip(people: readonly RaffleParticipant[]): RaffleParticipant[] {
+  if (people.length === 0) return [];
+  const picker = makePicker(people);
+  return Array.from({ length: VISIBLE }, () => picker.pick());
 }
 
 async function fireConfetti() {
@@ -78,6 +95,13 @@ export function RaffleScreen() {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, [load]);
+
+  // 대기 상태에서는 현재 응모자들로 섞인 스트립을 미리 보여준다.
+  useEffect(() => {
+    if (phase === "idle" && status) {
+      setStrip(buildIdleStrip(status.participants));
+    }
+  }, [phase, status]);
 
   const totalTickets =
     status?.participants.reduce((s, p) => s + p.tickets, 0) ?? 0;
@@ -136,8 +160,8 @@ export function RaffleScreen() {
       } else {
         y = target + OVERSHOOT * (1 - easeOutCubic((t - 0.88) / 0.12));
       }
-      // 속도에 비례한 모션 블러 — 빠를 때 슬롯 도는 느낌
-      setBlur(Math.min(7, Math.abs(y - prev) * 0.14));
+      // 속도에 비례한 은은한 블러 — 빠를 때도 이름이 살짝 읽히게 약하게만
+      setBlur(Math.min(2, Math.abs(y - prev) * 0.04));
       prev = y;
       setOffset(y);
 
@@ -227,7 +251,7 @@ export function RaffleScreen() {
               return (
                 <div
                   key={i}
-                  className="flex items-center justify-center gap-3"
+                  className="flex items-center justify-center"
                   style={{ height: ITEM_H }}
                 >
                   <span
@@ -238,15 +262,6 @@ export function RaffleScreen() {
                     }`}
                   >
                     {p.nickname}
-                  </span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      isWinnerRow
-                        ? "bg-amber-400/20 text-amber-200"
-                        : "bg-white/5 text-slate-500"
-                    }`}
-                  >
-                    {p.tickets}장
                   </span>
                 </div>
               );
