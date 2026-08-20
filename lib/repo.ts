@@ -2,8 +2,9 @@
 
 import type { EventStatus } from "./constants";
 import { ensureRecordsForUser, getDb } from "./db";
-import type { Difficulty, RankingRow, User } from "./types";
+import type { Difficulty, RaffleStatus, RankingRow, User } from "./types";
 import { computeRanking, type RankingEntrant } from "./ranking";
+import { calcRaffleTickets } from "./score";
 
 export function getEventStatus(): EventStatus {
   const row = getDb()
@@ -122,6 +123,55 @@ export function updateDifficultyPoints(
     for (const p of points) stmt.run(p.points, p.id);
   });
   tx();
+}
+
+/** 추첨 당첨자 목록 (당첨 순서대로). */
+export function getRaffleWinners(): { userId: number; nickname: string }[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT w.user_id, u.nickname
+       FROM raffle_winners w JOIN users u ON u.id = w.user_id
+       ORDER BY w.drawn_at ASC, w.user_id ASC`,
+    )
+    .all() as { user_id: number; nickname: string }[];
+  return rows.map((r) => ({ userId: r.user_id, nickname: r.nickname }));
+}
+
+export function addRaffleWinner(userId: number): void {
+  getDb()
+    .prepare(`INSERT OR IGNORE INTO raffle_winners (user_id) VALUES (?)`)
+    .run(userId);
+}
+
+export function clearRaffleWinners(): void {
+  getDb().prepare(`DELETE FROM raffle_winners`).run();
+}
+
+/**
+ * 추첨 현황 — 응모 가능자와 제외자 계산.
+ * 제외 규칙: ① 이미 당첨된 사람 ② 전체 점수 1등(공동 1등 포함, 총점 0 제외).
+ */
+export function getRaffleStatus(): RaffleStatus {
+  const raffleThreshold = getRaffleThreshold();
+  const ranking = getRanking();
+  const winners = getRaffleWinners();
+  const winnerIds = new Set(winners.map((w) => w.userId));
+
+  const excludedTop = ranking
+    .filter((r) => r.rank === 1 && r.totalScore > 0)
+    .map((r) => ({ userId: r.userId, nickname: r.nickname }));
+  const topIds = new Set(excludedTop.map((t) => t.userId));
+
+  const participants = ranking
+    .filter((r) => !winnerIds.has(r.userId) && !topIds.has(r.userId))
+    .map((r) => ({
+      userId: r.userId,
+      nickname: r.nickname,
+      tickets: calcRaffleTickets(r.totalScore, raffleThreshold),
+    }))
+    .filter((p) => p.tickets > 0);
+
+  return { participants, winners, excludedTop, raffleThreshold };
 }
 
 /** 전체 순위표 계산. */

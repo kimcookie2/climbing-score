@@ -19,6 +19,7 @@ export const ADMIN_LINKS = [
   { href: "/admin/scoring", label: "배점 설정" },
   { href: "/admin/control", label: "마감 관리" },
   { href: "/admin/members", label: "크루원 관리" },
+  { href: "/admin/raffle", label: "추첨" },
 ];
 
 export function AppHeader({ user, title, tickets = null }: Props) {

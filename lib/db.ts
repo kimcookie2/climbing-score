@@ -55,6 +55,14 @@ function migrate(db: Database.Database): void {
     );
   `);
 
+  // 추첨 당첨자 기록 — 한 번 당첨되면 다음 추첨에서 제외된다.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS raffle_winners (
+      user_id   INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      drawn_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   // 추첨권 기준점수 컬럼 (기존 DB에는 ALTER로 추가, 0 = 미사용).
   const eventStateColumns = db
     .prepare(`PRAGMA table_info(event_state)`)

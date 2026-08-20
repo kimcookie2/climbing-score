@@ -42,6 +42,21 @@ export type RankingRow = {
   totalScore: number;
 };
 
+/** 추첨 응모자 (추첨권 1장 이상). */
+export type RaffleParticipant = {
+  userId: number;
+  nickname: string;
+  tickets: number;
+};
+
+/** 추첨 현황 응답. */
+export type RaffleStatus = {
+  participants: RaffleParticipant[]; // 응모 가능자 (당첨자·1등 제외)
+  winners: { userId: number; nickname: string }[]; // 당첨 순서대로
+  excludedTop: { userId: number; nickname: string }[]; // 점수 1등(공동 포함) — 제외 대상
+  raffleThreshold: number;
+};
+
 export type SessionUser = {
   userId: number;
   nickname: string;
