@@ -20,10 +20,25 @@ export function calcTotalProblems(counts: Record<number, number>): number {
 }
 
 /**
- * 추첨권 개수 — 기준점수를 넘을 때마다 1장 (예: 기준 10점, 총점 25점 → 2장).
- * 기준점수 0 이하는 미사용으로 0장.
+ * 추첨권 누적 기준점수 — n번째 추첨권을 얻기 위해 필요한 최소 총점.
+ * 증분(30, 50, 70, 90, 120, 150, 180, 210)을 누적한 값으로,
+ * 뒤로 갈수록 다음 추첨권을 얻기가 더 어려워진다. 최대 8장.
+ */
+export const RAFFLE_TICKET_THRESHOLDS: readonly number[] = [
+  30, 80, 150, 240, 360, 510, 690, 900,
+];
+
+/**
+ * 추첨권 개수 — 누적 기준점수 테이블에서 총점이 넘는 구간 수만큼 부여한다.
+ * 예: 총점 300점 → 240(4장) 이상 360(5장) 미만이므로 4장.
+ * 기준점수 0 이하는 미사용으로 0장(테이블은 고정, 이 값은 사용 여부 토글).
  */
 export function calcRaffleTickets(total: number, threshold: number): number {
   if (threshold <= 0) return 0;
-  return Math.floor(total / threshold);
+  let tickets = 0;
+  for (const required of RAFFLE_TICKET_THRESHOLDS) {
+    if (total < required) break;
+    tickets += 1;
+  }
+  return tickets;
 }

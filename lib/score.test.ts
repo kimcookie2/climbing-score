@@ -34,20 +34,35 @@ describe("calcTotalProblems", () => {
 });
 
 describe("calcRaffleTickets", () => {
-  test("기준점수를 넘을 때마다 1장 (기준 10점, 25점 → 2장)", () => {
-    expect(calcRaffleTickets(25, 10)).toBe(2);
+  // 누적 기준점수: 30 / 80 / 150 / 240 / 360 / 510 / 690 / 900
+  const ENABLED = 1; // threshold > 0 = 추첨 사용
+
+  test("첫 기준점수(30) 미달이면 0장", () => {
+    expect(calcRaffleTickets(29, ENABLED)).toBe(0);
   });
 
-  test("기준점수 미달이면 0장", () => {
-    expect(calcRaffleTickets(9, 10)).toBe(0);
+  test("경계값에서 정확히 지급", () => {
+    expect(calcRaffleTickets(30, ENABLED)).toBe(1);
+    expect(calcRaffleTickets(80, ENABLED)).toBe(2);
+    expect(calcRaffleTickets(150, ENABLED)).toBe(3);
+    expect(calcRaffleTickets(240, ENABLED)).toBe(4);
   });
 
-  test("정확히 배수면 그만큼 지급", () => {
-    expect(calcRaffleTickets(10, 10)).toBe(1);
-    expect(calcRaffleTickets(30, 10)).toBe(3);
+  test("구간 사이 값은 아래 구간 수만큼 지급", () => {
+    expect(calcRaffleTickets(79, ENABLED)).toBe(1);
+    expect(calcRaffleTickets(239, ENABLED)).toBe(3);
+  });
+
+  test("총점 300점 → 4장", () => {
+    expect(calcRaffleTickets(300, ENABLED)).toBe(4);
+  });
+
+  test("최대 8장으로 상한", () => {
+    expect(calcRaffleTickets(900, ENABLED)).toBe(8);
+    expect(calcRaffleTickets(99999, ENABLED)).toBe(8);
   });
 
   test("기준점수 0(미사용)이면 항상 0장", () => {
-    expect(calcRaffleTickets(100, 0)).toBe(0);
+    expect(calcRaffleTickets(1000, 0)).toBe(0);
   });
 });
