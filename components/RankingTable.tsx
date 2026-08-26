@@ -24,8 +24,10 @@ export function RankingTable({ difficulties, ranking, highlightUserId }: Props) 
               총점
             </th>
             {highToLow.map((d) => (
-              <th key={d.id} className="px-1.5 py-2 text-center">
-                <ColorSwatch colorHex={d.color_hex} size={16} />
+              <th key={d.id} className="px-1.5 py-2">
+                <div className="flex justify-center">
+                  <ColorSwatch colorHex={d.color_hex} size={16} />
+                </div>
               </th>
             ))}
           </tr>
