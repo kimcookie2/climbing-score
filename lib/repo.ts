@@ -149,7 +149,7 @@ export function clearRaffleWinners(): void {
 
 /**
  * 추첨 현황 — 응모 가능자와 제외자 계산.
- * 제외 규칙: ① 이미 당첨된 사람 ② 전체 점수 1등(공동 1등 포함, 총점 0 제외).
+ * 제외 규칙: ① 이미 당첨된 사람 ② 전체 점수 1·2·3등(공동 순위 포함, 총점 0 제외).
  */
 export function getRaffleStatus(): RaffleStatus {
   const raffleThreshold = getRaffleThreshold();
@@ -158,7 +158,7 @@ export function getRaffleStatus(): RaffleStatus {
   const winnerIds = new Set(winners.map((w) => w.userId));
 
   const excludedTop = ranking
-    .filter((r) => r.rank === 1 && r.totalScore > 0)
+    .filter((r) => r.rank <= 3 && r.totalScore > 0)
     .map((r) => ({ userId: r.userId, nickname: r.nickname }));
   const topIds = new Set(excludedTop.map((t) => t.userId));
 

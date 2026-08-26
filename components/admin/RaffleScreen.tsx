@@ -72,13 +72,16 @@ const ENDINGS: SpinEnding[] = [
 /** 추첨권 수에 비례한 풀에서 인접 중복 없이 뽑는 픽 함수 생성. */
 function makePicker(people: readonly RaffleParticipant[]) {
   const pool = people.flatMap((p) => Array<RaffleParticipant>(p.tickets).fill(p));
+  // 인접 중복 회피는 "서로 다른 사람"이 2명 이상일 때만 의미가 있다.
+  // pool.length로 판단하면 1명이 추첨권을 여러 장 가진 경우 무한 루프에 빠진다.
+  const distinctPeople = new Set(pool.map((p) => p.userId)).size;
   let last: number | null = null;
   return {
     pick(): RaffleParticipant {
       let c: RaffleParticipant;
       do {
         c = pool[Math.floor(Math.random() * pool.length)];
-      } while (pool.length > 1 && c.userId === last);
+      } while (distinctPeople > 1 && c.userId === last);
       last = c.userId;
       return c;
     },
@@ -415,7 +418,7 @@ export function RaffleScreen() {
           <div className="mt-5 space-y-2 text-xs text-slate-500">
             {status.excludedTop.length > 0 && (
               <p>
-                👑 점수 1등 제외:{" "}
+                👑 점수 1·2·3등 제외:{" "}
                 <span className="text-slate-400">
                   {status.excludedTop.map((t) => t.nickname).join(", ")}
                 </span>

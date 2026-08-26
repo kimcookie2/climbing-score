@@ -51,9 +51,9 @@ export type RaffleParticipant = {
 
 /** 추첨 현황 응답. */
 export type RaffleStatus = {
-  participants: RaffleParticipant[]; // 응모 가능자 (당첨자·1등 제외)
+  participants: RaffleParticipant[]; // 응모 가능자 (당첨자·1·2·3등 제외)
   winners: { userId: number; nickname: string }[]; // 당첨 순서대로
-  excludedTop: { userId: number; nickname: string }[]; // 점수 1등(공동 포함) — 제외 대상
+  excludedTop: { userId: number; nickname: string }[]; // 점수 1·2·3등(공동 포함) — 제외 대상
   raffleThreshold: number;
 };
 
