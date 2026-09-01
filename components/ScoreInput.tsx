@@ -101,6 +101,13 @@ export function ScoreInput({ onEventClosed, onTicketsChange }: Props) {
     onTicketsChange?.(raffleThreshold > 0 ? tickets : null);
   }, [tickets, raffleThreshold, onTicketsChange]);
 
+  // 저장 완료 체크(✓)는 잠깐 보여준 뒤 조용히 사라진다.
+  useEffect(() => {
+    if (saveState !== "saved") return;
+    const id = setTimeout(() => setSaveState("idle"), 1400);
+    return () => clearTimeout(id);
+  }, [saveState]);
+
   if (isLoading) {
     return <p className="p-6 text-center text-slate-400">불러오는 중…</p>;
   }
@@ -215,33 +222,53 @@ function TotalBar({
   saveState: SaveState;
   raffleHint: string | null;
 }) {
-  const saveLabel: Record<SaveState, string> = {
-    idle: "",
-    saving: "저장 중…",
-    saved: "✓ 저장됨",
-    error: "⚠ 저장 실패",
-  };
+  const isError = saveState === "error";
   return (
     <div className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
-      <div className="mx-auto flex max-w-md items-center justify-between gap-3">
-        <div className="min-w-0">
-          {raffleHint && (
-            <p className="truncate text-sm font-semibold text-amber-600">
+      <div className="mx-auto max-w-md">
+        <div className="flex items-center justify-between gap-3">
+          {raffleHint ? (
+            <p className="min-w-0 truncate text-sm font-semibold text-amber-600">
               {raffleHint}
             </p>
+          ) : (
+            <span />
           )}
-          <p
-            className={`text-xs ${
-              saveState === "error" ? "text-red-600" : "text-slate-400"
-            }`}
-          >
-            {saveLabel[saveState]}
-          </p>
+          <div className="flex shrink-0 items-center gap-2">
+            <SaveIndicator saveState={saveState} />
+            <span className="text-lg font-bold text-slate-900">
+              총점 <span className="tabular-nums">{total}</span>점
+            </span>
+          </div>
         </div>
-        <span className="shrink-0 text-lg font-bold text-slate-900">
-          총점 <span className="tabular-nums">{total}</span>점
-        </span>
+
+        {/* C안 — 저장 실패일 때만 눈에 띄게 경고 */}
+        {isError && (
+          <p className="mt-2 text-center text-sm font-semibold text-red-600">
+            ⚠ 저장에 실패했어요. 네트워크를 확인해 주세요.
+          </p>
+        )}
       </div>
     </div>
   );
+}
+
+/** A안 — 저장 중엔 작은 스피너, 저장되면 체크(✓). 평소·실패 시엔 표시 없음. */
+function SaveIndicator({ saveState }: { saveState: SaveState }) {
+  if (saveState === "saving") {
+    return (
+      <span
+        aria-label="저장 중"
+        className="inline-block size-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600"
+      />
+    );
+  }
+  if (saveState === "saved") {
+    return (
+      <span aria-label="저장됨" className="text-base font-bold text-emerald-500">
+        ✓
+      </span>
+    );
+  }
+  return null;
 }
