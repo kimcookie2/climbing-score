@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ApiError, apiGet, apiSend } from "@/lib/client";
-import { calcRaffleTickets, calcTotalScore } from "@/lib/score";
+import { calcRaffleTickets, calcTotalScore, pointsToNextTicket } from "@/lib/score";
 import type { Difficulty, MyRecords } from "@/lib/types";
 import { ColorSwatch } from "./ColorSwatch";
 import { Modal } from "./Modal";
@@ -87,6 +87,15 @@ export function ScoreInput({ onEventClosed, onTicketsChange }: Props) {
   const total = calcTotalScore(counts, difficulties);
   const tickets = calcRaffleTickets(total, raffleThreshold);
 
+  // 다음 추첨권까지 남은 점수 안내. 미사용이면 표시하지 않고, 최대 달성이면 완료 문구.
+  const pointsToNext = pointsToNextTicket(total, raffleThreshold);
+  const raffleHint =
+    raffleThreshold <= 0
+      ? null
+      : pointsToNext === null
+        ? "🎫 추첨권 최대 획득!"
+        : `🎫 다음 추첨권까지 ${pointsToNext}점`;
+
   // 추첨권 수를 상위(헤더)로 보고.
   useEffect(() => {
     onTicketsChange?.(raffleThreshold > 0 ? tickets : null);
@@ -133,7 +142,7 @@ export function ScoreInput({ onEventClosed, onTicketsChange }: Props) {
         ))}
       </ul>
 
-      <TotalBar total={total} saveState={saveState} />
+      <TotalBar total={total} saveState={saveState} raffleHint={raffleHint} />
 
       <Modal
         isOpen={isClosedModalOpen}
@@ -197,7 +206,15 @@ function CountInput({
   );
 }
 
-function TotalBar({ total, saveState }: { total: number; saveState: SaveState }) {
+function TotalBar({
+  total,
+  saveState,
+  raffleHint,
+}: {
+  total: number;
+  saveState: SaveState;
+  raffleHint: string | null;
+}) {
   const saveLabel: Record<SaveState, string> = {
     idle: "",
     saving: "저장 중…",
@@ -206,15 +223,22 @@ function TotalBar({ total, saveState }: { total: number; saveState: SaveState })
   };
   return (
     <div className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
-      <div className="mx-auto flex max-w-md items-center justify-between">
-        <span
-          className={`text-sm ${
-            saveState === "error" ? "text-red-600" : "text-slate-400"
-          }`}
-        >
-          {saveLabel[saveState]}
-        </span>
-        <span className="text-lg font-bold text-slate-900">
+      <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+        <div className="min-w-0">
+          {raffleHint && (
+            <p className="truncate text-sm font-semibold text-amber-600">
+              {raffleHint}
+            </p>
+          )}
+          <p
+            className={`text-xs ${
+              saveState === "error" ? "text-red-600" : "text-slate-400"
+            }`}
+          >
+            {saveLabel[saveState]}
+          </p>
+        </div>
+        <span className="shrink-0 text-lg font-bold text-slate-900">
           총점 <span className="tabular-nums">{total}</span>점
         </span>
       </div>

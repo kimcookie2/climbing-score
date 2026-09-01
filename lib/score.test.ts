@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { calcRaffleTickets, calcTotalProblems, calcTotalScore } from "./score";
+import {
+  calcRaffleTickets,
+  calcTotalProblems,
+  calcTotalScore,
+  pointsToNextTicket,
+} from "./score";
 import type { Difficulty } from "./types";
 
 const difficulties: Difficulty[] = [
@@ -64,5 +69,32 @@ describe("calcRaffleTickets", () => {
 
   test("기준점수 0(미사용)이면 항상 0장", () => {
     expect(calcRaffleTickets(1000, 0)).toBe(0);
+  });
+});
+
+describe("pointsToNextTicket", () => {
+  const ENABLED = 1;
+
+  test("0점이면 첫 추첨권(30)까지 30점", () => {
+    expect(pointsToNextTicket(0, ENABLED)).toBe(30);
+  });
+
+  test("구간 사이 값은 다음 기준점수까지 남은 점수", () => {
+    // 300점 → 4장(240 보유), 다음은 360 → 60점 남음
+    expect(pointsToNextTicket(300, ENABLED)).toBe(60);
+  });
+
+  test("경계값에서는 그다음 기준점수까지", () => {
+    // 30점 → 1장, 다음은 80 → 50점 남음
+    expect(pointsToNextTicket(30, ENABLED)).toBe(50);
+  });
+
+  test("최대(8장) 달성이면 null", () => {
+    expect(pointsToNextTicket(900, ENABLED)).toBeNull();
+    expect(pointsToNextTicket(99999, ENABLED)).toBeNull();
+  });
+
+  test("추첨 미사용(0)이면 null", () => {
+    expect(pointsToNextTicket(300, 0)).toBeNull();
   });
 });

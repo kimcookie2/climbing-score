@@ -42,3 +42,18 @@ export function calcRaffleTickets(total: number, threshold: number): number {
   }
   return tickets;
 }
+
+/**
+ * 다음 추첨권을 얻기까지 남은 점수.
+ * - 추첨 미사용(threshold ≤ 0) 또는 이미 최대(8장) 획득이면 null.
+ * - 그 외에는 다음 누적 기준점수까지의 양수 차이.
+ */
+export function pointsToNextTicket(
+  total: number,
+  threshold: number,
+): number | null {
+  if (threshold <= 0) return null;
+  const tickets = calcRaffleTickets(total, threshold);
+  if (tickets >= RAFFLE_TICKET_THRESHOLDS.length) return null; // 최대 달성
+  return RAFFLE_TICKET_THRESHOLDS[tickets] - total;
+}
